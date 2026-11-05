@@ -1,0 +1,16 @@
+@tailwind base;@tailwind components;@tailwind utilities;
+@layer base{
+ html{scroll-behavior:smooth;scroll-padding-top:5rem}
+ body{@apply bg-ivory font-body text-ink antialiased}
+ :focus-visible{outline:2px solid #9c7f45;outline-offset:3px}
+ @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+}
+@layer components{
+ .btn-dark{@apply inline-flex items-center justify-center rounded-full bg-ink px-7 py-3 text-ivory transition hover:bg-champagne}
+ .btn-line{@apply inline-flex items-center justify-center rounded-full border border-ink/40 px-7 py-3 transition hover:border-champagne hover:text-champagne}
+ .eyebrow{@apply mb-4 font-logo text-sm tracking-[.5em] text-champagne}
+ .stage{position:relative;display:flex;align-items:flex-end;justify-content:center;overflow:hidden;padding-bottom:13%;background:radial-gradient(120% 70% at 70% 0%,#fffaf0 0,transparent 60%),linear-gradient(#efe7d8,#e2d8c5)}
+ .stage::after{content:"";position:absolute;inset:auto 12% 0;height:13%;border-radius:8px 8px 0 0;background:linear-gradient(#cfc4ae,#b9ad95)}
+ /* ظل مشربية: ضوء الصباح يمر عبر شبكة خشبية */
+ .mash{position:absolute;inset:0;background-image:repeating-linear-gradient(45deg,#3c2d1922 0 2px,transparent 2px 28px),repeating-linear-gradient(-45deg,#3c2d1922 0 2px,transparent 2px 28px);-webkit-mask-image:linear-gradient(115deg,#000 0,transparent 65%);mask-image:linear-gradient(115deg,#000 0,transparent 65%)}
+}

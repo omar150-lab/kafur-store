@@ -1,15 +1,19 @@
 'use client';
 import {useState} from 'react';
-import {MessageCircle} from 'lucide-react';
+import Link from 'next/link';
+import {MessageCircle,ShoppingBag} from 'lucide-react';
+import {useCart} from './CartProvider';
 import {SIZES} from '@/lib/pricing';
 import {egp} from '@/lib/format';
 import {site,waLink} from '@/lib/config';
 
 export default function ProductBuy({slug,name}:{slug:string;name:string}){
   const [ml,setMl]=useState<number>(SIZES[1]?.ml??SIZES[0].ml);
+  const {add}=useCart();
+  const [added,setAdded]=useState<number|null>(null);
   const size=SIZES.find(s=>s.ml===ml)??SIZES[0];
   const link=`${site.url}/product/${slug}`;
-  const text=`مرحبًا كافور، عايز أطلب عطر ${name} حجم ${size.ml} مل (${egp(size.price)})${site.url.includes('localhost')?'':`\n${link}`}`;
+  const text=`مرحبًا كافور، عايز أستفسر عن عطر ${name} حجم ${size.ml} مل (${egp(size.price)})${site.url.includes('localhost')?'':`\n${link}`}`;
   const wa=waLink(text);
   return(
     <div>
@@ -29,10 +33,9 @@ export default function ProductBuy({slug,name}:{slug:string;name:string}){
         <span className="text-sm text-ink/60">السعر</span>
         <p aria-live="polite"><span className="font-display text-4xl">{egp(size.price)}</span>{site.demo&&<span className="ms-2 text-xs text-champagne">سعر تجريبي</span>}</p>
       </div>
-      {wa
-        ?<a href={wa} target="_blank" rel="noopener noreferrer" className="btn-dark mt-5 w-full"><MessageCircle className="me-2 size-5" aria-hidden/>اطلب {size.ml} مل عبر واتساب</a>
-        :<p className="mt-5 border border-dashed border-ink/25 p-4 text-center text-sm text-ink/60">الطلب عبر واتساب سيتاح بعد ضبط رقم المتجر.</p>}
-      <p className="mt-3 text-xs text-ink/60">السلة وإتمام الطلب بالتفصيل تأتي في المرحلة التالية. حاليًا يصلك الطلب مباشرة على واتساب.</p>
+      <button type="button" className="btn-dark mt-5 w-full" onClick={()=>{add(slug,size.ml);setAdded(size.ml);}}><ShoppingBag className="me-2 size-5" aria-hidden/>أضف {size.ml} مل للسلة</button>
+      <p className="mt-3 min-h-5 text-sm" role="status" aria-live="polite">{added!==null&&<>تمت إضافة {name} ({added} مل). <Link href="/cart" className="text-champagne underline">عرض السلة وإتمام الطلب</Link></>}</p>
+      {wa&&<a href={wa} target="_blank" rel="noopener noreferrer" className="btn-line mt-2 w-full"><MessageCircle className="me-2 size-5" aria-hidden/>اسأل عن هذا الحجم على واتساب</a>}
     </div>
   );
 }

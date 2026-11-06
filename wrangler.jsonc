@@ -5,5 +5,7 @@
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {"binding": "ASSETS", "directory": ".open-next/assets"},
-  "observability": {"enabled": true}
+  "observability": {"enabled": true},
+  // متغيرات التشغيل (مفاتيح Supabase) تُضاف من لوحة Cloudflare كـ Secrets. هذا الخيار يمنع النشر من حذف أي متغير أضفته من اللوحة.
+  "keep_vars": true
 }

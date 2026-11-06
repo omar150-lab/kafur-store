@@ -2,7 +2,7 @@ import Link from 'next/link';
 import Bottle from './Bottle';
 import {NOTES,CONCENTRATION,type Product} from '@/lib/products';
 import {SEASON_LABEL} from '@/lib/catalog';
-import {fromPrice} from '@/lib/pricing';
+import {productFromPrice} from '@/lib/pricing';
 import {egp} from '@/lib/format';
 export default function ProductCard({p}:{p:Product}){
   const notes=[...p.notes.top,...p.notes.heart,...p.notes.base].map(k=>NOTES[k]).filter(Boolean).slice(0,3).join(' · ');
@@ -18,7 +18,7 @@ export default function ProductCard({p}:{p:Product}){
           <p className="text-xs text-ink/60">{p.house} · {CONCENTRATION[p.concentration]}</p>
           <h3 className="font-display text-xl group-hover:text-champagne">{p.name}</h3>
           {notes&&<p className="mt-1 text-xs text-ink/60">{notes}</p>}
-          <p className="mt-1 text-sm">من {egp(fromPrice())}</p>
+          <p className="mt-1 text-sm">من {egp(productFromPrice(p.prices))}</p>
         </div>
       </article>
     </Link>

@@ -3,12 +3,13 @@ import {useState} from 'react';
 import Link from 'next/link';
 import {MessageCircle,ShoppingBag} from 'lucide-react';
 import {useCart} from './CartProvider';
-import {SIZES} from '@/lib/pricing';
+import {sizesOf,type Prices} from '@/lib/pricing';
 import {egp} from '@/lib/format';
 import {site,waLink} from '@/lib/config';
 
-export default function ProductBuy({slug,name}:{slug:string;name:string}){
-  const [ml,setMl]=useState<number>(SIZES[1]?.ml??SIZES[0].ml);
+export default function ProductBuy({slug,name,prices}:{slug:string;name:string;prices:Prices}){
+  const SIZES=sizesOf(prices);
+  const [ml,setMl]=useState<number>(SIZES[Math.floor((SIZES.length-1)/2)].ml);
   const {add}=useCart();
   const [added,setAdded]=useState<number|null>(null);
   const size=SIZES.find(s=>s.ml===ml)??SIZES[0];

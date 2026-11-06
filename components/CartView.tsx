@@ -5,36 +5,37 @@ import {Minus,Plus,Trash2} from 'lucide-react';
 import Bottle from './Bottle';
 import {useCart} from './CartProvider';
 import {MAX_QTY} from '@/lib/cart';
-import {priceCart,validateCustomer,type FieldErrors} from '@/lib/order';
-import {SHIPPING_TIERS} from '@/lib/shipping';
+import {priceCart,validateCustomer,type CatalogLite,type FieldErrors} from '@/lib/order';
+import {governoratesOf} from '@/lib/shipping';
 import {egp} from '@/lib/format';
 import {site} from '@/lib/config';
 
 const field='w-full rounded-sm border bg-ivory px-3 py-2.5 text-sm focus:border-champagne';
 const empty={name:'',phone:'',governorate:'',address:'',notes:''};
 
-export default function CartView(){
+export default function CartView({catalog}:{catalog:CatalogLite}){
   const {items,ready,setQty,remove,clear}=useCart();
   const [form,setForm]=useState(empty);
   const [errors,setErrors]=useState<FieldErrors>({});
   const [status,setStatus]=useState<'idle'|'sending'|'done'|'error'>('idle');
   const [message,setMessage]=useState('');
   const [waUrl,setWaUrl]=useState('');
+  const [orderNo,setOrderNo]=useState<string|null>(null);
 
-  const quote=useMemo(()=>priceCart(items,form.governorate),[items,form.governorate]);
+  const quote=useMemo(()=>priceCart(items,catalog,form.governorate),[items,catalog,form.governorate]);
   const set=(k:keyof typeof empty)=>(e:React.ChangeEvent<HTMLInputElement|HTMLTextAreaElement|HTMLSelectElement>)=>{setForm(f=>({...f,[k]:e.target.value}));if(errors[k])setErrors(x=>({...x,[k]:undefined}));};
 
   async function submit(e:React.FormEvent){
     e.preventDefault();
     if(status==='sending')return;
-    const v=validateCustomer(form,form.governorate);
+    const v=validateCustomer(form,form.governorate,governoratesOf(catalog.tiers));
     if(!v.ok){setErrors(v.errors);setMessage('راجع الحقول المعلّمة.');setStatus('error');return;}
     setErrors({});setMessage('');setStatus('sending');
     try{
       const res=await fetch('/api/order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items,governorate:form.governorate,customer:form})});
       const data=await res.json();
       if(!res.ok||!data.ok){setErrors(data.errors??{});setMessage(data.message??'حصلت مشكلة، جرّب تاني.');setStatus('error');return;}
-      setWaUrl(data.whatsappUrl);setStatus('done');
+      setWaUrl(data.whatsappUrl);setOrderNo(data.orderNo??null);setStatus('done');
       window.location.assign(data.whatsappUrl);
     }catch{setMessage('تعذر الاتصال بالخادم. اتأكد من النت وجرّب تاني.');setStatus('error');}
   }
@@ -87,7 +88,7 @@ export default function CartView(){
           <label className="block text-sm">المحافظة
             <select value={form.governorate} onChange={set('governorate')} className={`${field} ${border('governorate')} mt-1`} {...err('governorate')}>
               <option value="">اختار المحافظة</option>
-              {SHIPPING_TIERS.map(t=><optgroup key={t.id} label={`${t.label} · الشحن ${egp(t.fee)}`}>{t.governorates.map(g=><option key={g} value={g}>{g}</option>)}</optgroup>)}
+              {catalog.tiers.map(t=><optgroup key={t.id} label={`${t.label} · الشحن ${egp(t.fee)}`}>{t.governorates.map(g=><option key={g} value={g}>{g}</option>)}</optgroup>)}
             </select><Err k="governorate"/>
           </label>
           <label className="block text-sm">العنوان بالتفصيل<textarea value={form.address} onChange={set('address')} autoComplete="street-address" rows={3} maxLength={250} className={`${field} ${border('address')} mt-1`} {...err('address')}/><Err k="address"/></label>
@@ -107,9 +108,10 @@ export default function CartView(){
 
         {status==='done'&&(
           <div className="mt-5 border border-champagne/50 p-4 text-sm" role="status">
+            {orderNo&&<p className="mb-2">رقم طلبك: <strong>{orderNo}</strong></p>}
             <p>لو واتساب ما اتفتحش لوحده، اضغط هنا:</p>
             <a href={waUrl} target="_blank" rel="noopener noreferrer" className="btn-line mt-3 w-full">افتح واتساب</a>
-            <button type="button" className="mt-3 w-full text-xs text-ink/60 underline" onClick={()=>{clear();setForm(empty);setStatus('idle');}}>بعد ما تبعت الرسالة: فضّي السلة</button>
+            <button type="button" className="mt-3 w-full text-xs text-ink/60 underline" onClick={()=>{clear();setForm(empty);setOrderNo(null);setStatus('idle');}}>بعد ما تبعت الرسالة: فضّي السلة</button>
           </div>
         )}
       </form>

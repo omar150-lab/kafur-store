@@ -1,11 +1,15 @@
 import Link from 'next/link';
 import Bottle from '@/components/Bottle';
 import ProductCard from '@/components/ProductCard';
-import {products,CONCENTRATION} from '@/lib/products';
-import {SIZES} from '@/lib/pricing';
+import {CONCENTRATION} from '@/lib/products';
+import {getCatalog} from '@/lib/data';
 import {egp} from '@/lib/format';
 import {site,waLink} from '@/lib/config';
-export default function Home(){
+export const dynamic='force-dynamic';
+export default async function Home(){
+  const {products}=await getCatalog();
+  // الأحجام المعروضة: لكل حجم أقل سعر بين العطور، وتظهر كلمة «من» فقط لو الأسعار تختلف بين العطور.
+  const sizes=[...new Set(products.flatMap(p=>Object.keys(p.prices).map(Number)))].sort((a,b)=>a-b).map(ml=>{const list=products.map(p=>p.prices[ml]).filter(Boolean);return {ml,price:Math.min(...list),varies:new Set(list).size>1};});
   const hero=products.find(p=>p.featured)??products[0];
   const winter=products.filter(p=>p.season==='winter').slice(0,4);
   const wa=waLink('مرحبًا كافور، عايز أستفسر عن العطور');
@@ -33,8 +37,8 @@ export default function Home(){
       <div className="mx-auto max-w-7xl">
         <h2 className="font-display text-4xl md:text-5xl">الأحجام والأسعار</h2>
         {site.demo&&<p className="mt-2 text-sm text-champagne">أسعار تجريبية: تُعتمد قبل الإطلاق.</p>}
-        <div className="mt-10 grid gap-4 md:grid-cols-3">{SIZES.map(s=>(
-          <div key={s.ml} className="border border-ink/15 bg-ivory p-8 text-center"><p className="font-display text-5xl">{s.ml}<span className="text-xl"> مل</span></p><p className="mt-4 text-2xl text-champagne">{egp(s.price)}</p></div>
+        <div className="mt-10 grid gap-4 md:grid-cols-3">{sizes.map(s=>(
+          <div key={s.ml} className="border border-ink/15 bg-ivory p-8 text-center"><p className="font-display text-5xl">{s.ml}<span className="text-xl"> مل</span></p><p className="mt-4 text-2xl text-champagne">{s.varies&&<span className="text-sm">من </span>}{egp(s.price)}</p></div>
         ))}</div>
       </div>
     </section>

@@ -3,6 +3,7 @@ import {Amiri,Cairo,Cormorant_Garamond} from 'next/font/google';
 import './globals.css';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import {CartProvider} from '@/components/CartProvider';
 import {site} from '@/lib/config';
 const display=Amiri({subsets:['arabic','latin'],weight:['400','700'],variable:'--f-display'});
 const body=Cairo({subsets:['arabic','latin'],variable:'--f-body'});
@@ -18,9 +19,11 @@ export default function RootLayout({children}:{children:React.ReactNode}){
     <html lang="ar" dir="rtl" className={`${display.variable} ${body.variable} ${logo.variable}`}>
       <body>
         <div className="bg-night px-4 py-2 text-center text-xs text-ivory/90">توصيل داخل مصر{site.demo&&' · نسخة تجريبية: الأسعار وبيانات الشحن غير نهائية'}</div>
-        <Header/>
-        <main>{children}</main>
-        <Footer/>
+        <CartProvider>
+          <Header/>
+          <main>{children}</main>
+          <Footer/>
+        </CartProvider>
       </body>
     </html>
   );

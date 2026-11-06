@@ -33,6 +33,11 @@ describe('filters',()=>{
 describe('sort',()=>{
   it('الافتراضي: المميز أولًا',()=>{const r=sortProducts(products,'featured');const lastFeatured=r.map(p=>!!p.featured).lastIndexOf(true);expect(r.slice(0,lastFeatured+1).every(p=>p.featured)).toBe(true);});
   it('بالاسم',()=>{const r=sortProducts(products,'name').map(p=>p.name);expect(r).toEqual([...r].sort((a,b)=>a.localeCompare(b,'ar')));});
+  it('بالسعر (أقل سعر لكل عطر)',()=>{
+    const custom:typeof products=[{...products[0],name:'ا',prices:{50:500}},{...products[1],name:'ب',prices:{30:100,50:900}},{...products[2],name:'ج',prices:{50:300}}];
+    expect(sortProducts(custom,'price-asc').map(p=>p.name)).toEqual(['ب','ج','ا']);
+    expect(sortProducts(custom,'price-desc').map(p=>p.name)).toEqual(['ا','ج','ب']);
+  });
   it('لا يعدّل المصفوفة الأصلية',()=>{const before=slugs(products);sortProducts(products,'name');expect(slugs(products)).toEqual(before);});
 });
 

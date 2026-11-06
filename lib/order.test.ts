@@ -1,24 +1,23 @@
 import {describe,expect,it} from 'vitest';
 import {addToCart,cartCount,MAX_LINES,MAX_QTY,removeFromCart,sanitizeCart,setQty} from './cart';
-import {buildMessage,buildOrder,normalizePhone,priceCart,validateCustomer} from './order';
+import {buildMessage,normalizePhone,priceCart,validateCustomer} from './order';
 import {products} from './products';
-import {SIZES} from './pricing';
-import {shippingFor} from './shipping';
+import {SHIPPING_TIERS,shippingFor} from './shipping';
 
-const opts={whatsapp:'201279269784',demo:true};
+const catalog={products,tiers:SHIPPING_TIERS};
 const customer={name:'عمر',phone:'٠١٠١٢٣٤٥٦٧٨',address:'شارع النيل، بجوار المسجد، أسوان',notes:''};
-const price=(ml:number)=>SIZES.find(s=>s.ml===ml)!.price;
+const price=(slug:string,ml:number)=>products.find(p=>p.slug===slug)!.prices[ml];
 
 describe('cart',()=>{
-  it('يرفض المنتج المجهول والحجم المجهول والكمية الغلط',()=>{
-    expect(sanitizeCart([{slug:'nope',ml:50,qty:1},{slug:'sauvage',ml:77,qty:1},{slug:'sauvage',ml:50,qty:0},{slug:'sauvage',ml:50,qty:'2'},null,5])).toEqual([]);
+  it('يرفض الشكل الغلط',()=>{
+    expect(sanitizeCart([{slug:'Bad Slug',ml:50,qty:1},{slug:'sauvage',ml:0,qty:1},{slug:'sauvage',ml:50.5,qty:1},{slug:'sauvage',ml:50,qty:0},{slug:'sauvage',ml:50,qty:'2'},null,5])).toEqual([]);
     expect(sanitizeCart('x')).toEqual([]);
   });
   it('يدمج المكرر ويحدّ الكمية',()=>{
     expect(sanitizeCart([{slug:'sauvage',ml:50,qty:3},{slug:'sauvage',ml:50,qty:9}])).toEqual([{slug:'sauvage',ml:50,qty:MAX_QTY}]);
   });
   it('يحدّ عدد الأسطر',()=>{
-    const raw=products.flatMap(p=>SIZES.map(s=>({slug:p.slug,ml:s.ml,qty:1})));
+    const raw=Array.from({length:MAX_LINES+5},(_,i)=>({slug:`p${i}`,ml:50,qty:1}));
     expect(sanitizeCart(raw)).toHaveLength(MAX_LINES);
   });
   it('إضافة وتعديل وحذف',()=>{
@@ -32,15 +31,24 @@ describe('cart',()=>{
 });
 
 describe('pricing',()=>{
-  it('السعر من بيانات المتجر فقط، مهما أرسل العميل',()=>{
-    const q=priceCart([{slug:'sauvage',ml:50,qty:2,price:1} as never],'أسوان');
-    expect(q.lines[0].unit).toBe(price(50));
-    expect(q.subtotal).toBe(price(50)*2);
+  it('السعر من الكتالوج فقط، مهما أرسل العميل',()=>{
+    const q=priceCart([{slug:'sauvage',ml:50,qty:2,price:1} as never],catalog,'أسوان');
+    expect(q.lines[0].unit).toBe(price('sauvage',50));
+    expect(q.subtotal).toBe(price('sauvage',50)*2);
     expect(q.shipping).toBe(shippingFor('أسوان'));
     expect(q.total).toBe(q.subtotal+(q.shipping??0));
   });
+  it('يتخطى منتجًا غير موجود أو حجمًا غير متاح',()=>{
+    const q=priceCart([{slug:'nope',ml:50,qty:1},{slug:'sauvage',ml:77,qty:1},{slug:'sauvage',ml:30,qty:1}],catalog,'أسوان');
+    expect(q.lines).toHaveLength(1);
+  });
+  it('أسعار مختلفة لكل عطر',()=>{
+    const custom={products:[{...products[0],prices:{50:999}},{...products[1],prices:{50:111}}],tiers:SHIPPING_TIERS};
+    const q=priceCart([{slug:products[0].slug,ml:50,qty:1},{slug:products[1].slug,ml:50,qty:2}],custom);
+    expect(q.subtotal).toBe(999+222);
+  });
   it('بدون محافظة: لا شحن ولا إجمالي',()=>{
-    const q=priceCart([{slug:'sauvage',ml:30,qty:1}]);
+    const q=priceCart([{slug:'sauvage',ml:30,qty:1}],catalog);
     expect(q.shipping).toBeNull();expect(q.total).toBeNull();
   });
   it('الأقرب لأسوان أرخص',()=>{expect(shippingFor('أسوان')!).toBeLessThan(shippingFor('القاهرة')!);expect(shippingFor('القاهرة')!).toBeLessThan(shippingFor('مطروح')!);});
@@ -59,37 +67,20 @@ describe('validateCustomer',()=>{
     expect(v.ok).toBe(false);
     if(!v.ok)expect(Object.keys(v.errors).sort()).toEqual(['address','governorate','name','notes','phone']);
   });
-  it('رقم غير مصري',()=>{const v=validateCustomer({...customer,phone:'0501234567'},'أسوان');expect(v.ok).toBe(false);});
+  it('المحافظات من الكتالوج الممرَّر',()=>{expect(validateCustomer(customer,'أسوان',['القاهرة']).ok).toBe(false);});
+  it('رقم غير مصري',()=>{expect(validateCustomer({...customer,phone:'0501234567'},'أسوان').ok).toBe(false);});
 });
 
-describe('buildOrder',()=>{
-  const items=[{slug:'sauvage',ml:50,qty:2},{slug:'khamrah',ml:100,qty:1}];
-  it('طلب سليم: رسالة وإجمالي ورابط واتساب',()=>{
-    const r=buildOrder({items,governorate:'أسوان',customer},opts);
-    expect(r.ok).toBe(true);
-    if(!r.ok)return;
-    const expected=price(50)*2+price(100)+shippingFor('أسوان')!;
-    expect(r.quote.total).toBe(expected);
-    expect(r.message).toContain('سوفاج - 50 مل × 2');
-    expect(r.message).toContain('خمرة - 100 مل × 1');
-    expect(r.message).toContain('01012345678');
-    expect(r.message).toContain('تجريبية');
-    expect(r.whatsappUrl.startsWith('https://wa.me/201279269784?text=')).toBe(true);
-    expect(decodeURIComponent(r.whatsappUrl.split('text=')[1])).toBe(r.message);
+describe('buildMessage',()=>{
+  const q=priceCart([{slug:'sauvage',ml:50,qty:2},{slug:'khamrah',ml:100,qty:1}],catalog,'أسوان');
+  const c={...customer,phone:'01012345678'};
+  it('يحتوي الطلب والإجمالي ورقم الطلب',()=>{
+    const m=buildMessage(q,c,'أسوان',true,'KF-1001');
+    expect(m).toContain('(KF-1001)');expect(m).toContain('سوفاج - 50 مل × 2');expect(m).toContain('خمرة - 100 مل × 1');expect(m).toContain('تجريبية');
   });
-  it('سلة فاضية أو كلها غلط',()=>{
-    const r=buildOrder({items:[{slug:'x',ml:50,qty:1}],governorate:'أسوان',customer},opts);
-    expect(r.ok).toBe(false);if(!r.ok)expect(r.errors.items).toBeTruthy();
-  });
-  it('يرجّع أخطاء الحقول مع أخطاء السلة',()=>{
-    const r=buildOrder({items:[],governorate:'',customer:{}},opts);
-    expect(r.ok).toBe(false);if(!r.ok)expect(Object.keys(r.errors)).toEqual(expect.arrayContaining(['items','name','phone','governorate','address']));
-  });
-  it('مدخلات غريبة لا تكسر',()=>{for(const x of [null,undefined,1,'a',[],{items:'x'}])expect(buildOrder(x,opts).ok).toBe(false);});
-  it('الملاحظات تظهر فقط عند وجودها، وبدون علامة التجريب في الإنتاج',()=>{
-    const q=priceCart(items,'أسوان');
-    const m=buildMessage(q,{...customer,phone:'01012345678',notes:'اتصل قبل الوصول'},'أسوان',false);
-    expect(m).toContain('ملاحظات: اتصل قبل الوصول');expect(m).not.toContain('تجريبية');
-    expect(buildMessage(q,{...customer,phone:'01012345678'},'أسوان',false)).not.toContain('ملاحظات');
+  it('بدون رقم طلب ولا علامة تجريب في الإنتاج',()=>{
+    const m=buildMessage(q,{...c,notes:'اتصل قبل الوصول'},'أسوان',false);
+    expect(m).not.toContain('KF-');expect(m).not.toContain('تجريبية');expect(m).toContain('ملاحظات: اتصل قبل الوصول');
+    expect(buildMessage(q,c,'أسوان',false)).not.toContain('ملاحظات');
   });
 });

@@ -1,15 +1,17 @@
 import {NOTES,CONCENTRATION,type Product} from './products';
+import {productFromPrice} from './pricing';
 
 export const SEASON_LABEL={winter:'شتوي',summer:'صيفي'} as const;
 export type Season=keyof typeof SEASON_LABEL;
 export type Concentration=Product['concentration'];
-export type SortKey='featured'|'name'|'house';
+export type SortKey='featured'|'name'|'house'|'price-asc'|'price-desc';
 export const SORT_OPTIONS:{key:SortKey;label:string}[]=[
   {key:'featured',label:'الافتراضي'},
   {key:'name',label:'الاسم (أ → ي)'},
   {key:'house',label:'الدار (أ → ي)'},
+  {key:'price-asc',label:'السعر: الأقل أولًا'},
+  {key:'price-desc',label:'السعر: الأعلى أولًا'},
 ];
-// ملاحظة: لا يوجد ترتيب بالسعر حاليًا لأن السعر يتبع الحجم وليس العطر. يُضاف عند وجود أسعار لكل عطر (المرحلة ٥).
 
 export type Filters={q:string;season?:Season;conc?:Concentration;house?:string;note?:string;sort:SortKey};
 export const DEFAULT_FILTERS:Filters={q:'',sort:'featured'};
@@ -59,6 +61,9 @@ export function sortProducts(list:Product[],sort:SortKey):Product[]{
   const out=[...list];
   if(sort==='name')return out.sort((a,b)=>ar(a.name,b.name));
   if(sort==='house')return out.sort((a,b)=>ar(a.house,b.house)||ar(a.name,b.name));
+  const price=(x:Product)=>productFromPrice(x.prices);
+  if(sort==='price-asc')return out.sort((a,b)=>price(a)-price(b)||ar(a.name,b.name));
+  if(sort==='price-desc')return out.sort((a,b)=>price(b)-price(a)||ar(a.name,b.name));
   return out.sort((a,b)=>Number(!!b.featured)-Number(!!a.featured)); // ترتيب مستقر: المميز أولًا ثم الترتيب الأصلي
 }
 

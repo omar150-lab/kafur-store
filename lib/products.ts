@@ -1,5 +1,6 @@
 // Generated from the v1 site. Fragrance data comes from the brand's Instagram posts: treat as SAMPLE until the owner approves it.
-export type Product={slug:string;name:string;house:string;concentration:'edp'|'extrait'|'parfum';tagline:string;color:string;season?:'winter'|'summer';featured?:boolean;notes:{top:string[];heart:string[];base:string[]}};
+import {defaultPrices} from './pricing';
+export type Product={slug:string;name:string;house:string;concentration:'edp'|'extrait'|'parfum';tagline:string;color:string;season?:'winter'|'summer';featured?:boolean;notes:{top:string[];heart:string[];base:string[]};/** حجم (مل) ← سعر (ج.م) */prices:Record<number,number>};
 export const CONCENTRATION:Record<Product['concentration'],string>={edp:'ماء عطر',extrait:'خلاصة عطر',parfum:'بارفان'};
 export const NOTES:Record<string,string>={
  "sf": "زعفران",
@@ -77,7 +78,7 @@ export const NOTES:Record<string,string>={
  "rm": "روزماري",
  "pe": "فلفل"
 };
-export const products:Product[]=[
+const base:Omit<Product,'prices'>[]=[
  {
   "slug": "tobacco-vanille",
   "name": "توباكو فانيل",
@@ -597,3 +598,5 @@ export const products:Product[]=[
   }
  }
 ];
+/** بيانات أولية واحتياطية: المصدر الفعلي بعد المرحلة ٥ هو قاعدة البيانات (lib/data.ts). */
+export const products:Product[]=base.map(p=>({...p,prices:defaultPrices()}));

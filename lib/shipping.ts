@@ -9,5 +9,6 @@ export const SHIPPING_TIERS:Tier[]=[
  {id:6,label:'الدلتا والإسكندرية',fee:95,governorates:['الشرقية','الغربية','الدقهلية','الإسكندرية','البحيرة','بورسعيد','كفر الشيخ','دمياط']},
  {id:7,label:'الأطراف',fee:110,governorates:['مطروح','شمال سيناء','جنوب سيناء']},
 ];
-export const GOVERNORATES=SHIPPING_TIERS.flatMap(t=>t.governorates);
-export const shippingFor=(gov:string)=>SHIPPING_TIERS.find(t=>t.governorates.includes(gov))?.fee??null;
+export const governoratesOf=(tiers:Tier[]=SHIPPING_TIERS)=>tiers.flatMap(t=>t.governorates);
+export const GOVERNORATES=governoratesOf();
+export const shippingFor=(gov:string,tiers:Tier[]=SHIPPING_TIERS)=>tiers.find(t=>t.governorates.includes(gov))?.fee??null;

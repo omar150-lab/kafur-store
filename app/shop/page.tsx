@@ -1,6 +1,6 @@
 import type {Metadata} from 'next';
 import ShopBrowser from '@/components/ShopBrowser';
-import {products} from '@/lib/products';
+import {getCatalog} from '@/lib/data';
 import {parseFilters,serializeFilters} from '@/lib/catalog';
 import {site} from '@/lib/config';
 export const metadata:Metadata={
@@ -9,9 +9,11 @@ export const metadata:Metadata={
   alternates:{canonical:'/shop'},
 };
 type SP=Promise<Record<string,string|string[]|undefined>>;
+export const dynamic='force-dynamic';
 export default async function ShopPage({searchParams}:{searchParams:SP}){
   // الفلاتر تُقرأ من الرابط على الخادم، فيصل الزائر (ومحركات البحث) HTML فيه النتائج نفسها بلا وميض.
   const initial=parseFilters(await searchParams);
+  const {products}=await getCatalog();
   return(
     <section className="mx-auto max-w-7xl px-5 py-12 md:py-16">
       <h1 className="font-display text-4xl md:text-6xl">المتجر</h1>

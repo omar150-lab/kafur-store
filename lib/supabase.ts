@@ -13,10 +13,12 @@ export class SbError extends Error{
   constructor(public status:number,public code:string,message:string){super(message);this.name='SbError';}
 }
 
-export async function sbRequest<T>(cfg:SbConfig,path:string,opts:{method?:string;body?:unknown;timeoutMs?:number;fetchImpl?:typeof fetch}={}):Promise<T>{
+export async function sbRequest<T>(cfg:SbConfig,path:string,opts:{method?:string;body?:unknown;timeoutMs?:number;fetchImpl?:typeof fetch;bearer?:string;prefer?:string}={}):Promise<T>{
   const headers:Record<string,string>={apikey:cfg.key,Accept:'application/json'};
   // المفاتيح القديمة (JWT) تحتاج Authorization أيضًا؛ المفاتيح الجديدة (sb_...) تكفيها apikey.
-  if(cfg.key.startsWith('eyJ'))headers.Authorization=`Bearer ${cfg.key}`;
+  if(opts.bearer)headers.Authorization=`Bearer ${opts.bearer}`; // توكن المستخدم (المدير): تُطبَّق عليه سياسات RLS
+  else if(cfg.key.startsWith('eyJ'))headers.Authorization=`Bearer ${cfg.key}`;
+  if(opts.prefer)headers.Prefer=opts.prefer;
   if(opts.body!==undefined)headers['Content-Type']='application/json';
   const ctl=new AbortController();
   const timer=setTimeout(()=>ctl.abort(),opts.timeoutMs??5000);

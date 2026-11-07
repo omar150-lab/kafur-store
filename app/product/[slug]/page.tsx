@@ -5,30 +5,33 @@ import Bottle from '@/components/Bottle';
 import NotesPyramid from '@/components/NotesPyramid';
 import ProductBuy from '@/components/ProductBuy';
 import ProductCard from '@/components/ProductCard';
-import {products,CONCENTRATION} from '@/lib/products';
+import {CONCENTRATION} from '@/lib/products';
+import {getCatalog} from '@/lib/data';
 import {SEASON_LABEL,allNoteKeys,getProduct,noteName,relatedProducts} from '@/lib/catalog';
-import {SHIPPING_TIERS} from '@/lib/shipping';
 import {egp} from '@/lib/format';
+import {sizesOf} from '@/lib/pricing';
 import {site} from '@/lib/config';
 
-export const dynamicParams=false;
-export const generateStaticParams=()=>products.map(p=>({slug:p.slug}));
+// الصفحة تقرأ من قاعدة البيانات عند كل طلب (مع ذاكرة قصيرة)، فتظهر تعديلات الأسعار والمنتجات بسرعة.
+export const dynamic='force-dynamic';
 
 type Props={params:Promise<{slug:string}>};
 
 export async function generateMetadata({params}:Props):Promise<Metadata>{
+  const {products}=await getCatalog();
   const p=getProduct(products,(await params).slug);
   if(!p)return {};
   const notes=allNoteKeys(p).map(noteName).filter(Boolean).slice(0,5).join('، ');
-  const description=`${p.name} من كافور (${CONCENTRATION[p.concentration]}) مستوحى من عطر ${p.house}.${notes?` نوتات: ${notes}.`:''} بأحجام 30 و50 و100 مل.`;
+  const description=`${p.name} من كافور (${CONCENTRATION[p.concentration]}) مستوحى من عطر ${p.house}.${notes?` نوتات: ${notes}.`:''} بأحجام ${sizesOf(p.prices).map(s=>s.ml).join(' و')} مل.`;
   return {title:p.name,description,alternates:{canonical:`/product/${p.slug}`},openGraph:{title:`${p.name} | ${site.name}`,description,type:'website',locale:'ar_EG'}};
 }
 
 export default async function ProductPage({params}:Props){
+  const {products,tiers}=await getCatalog();
   const p=getProduct(products,(await params).slug);
   if(!p)notFound();
   const related=relatedProducts(products,p);
-  const fees=SHIPPING_TIERS.map(t=>t.fee);
+  const fees=tiers.map(t=>t.fee);
   const [minFee,maxFee]=[Math.min(...fees),Math.max(...fees)];
   return(
     <>
@@ -49,7 +52,7 @@ export default async function ProductPage({params}:Props){
           <h1 className="mt-2 font-display text-4xl md:text-6xl">{p.name}</h1>
           {p.tagline&&<p className="mt-4 text-lg text-ink/70">{p.tagline}</p>}
           <p className="mt-3 text-sm text-ink/60">مستوحى من عطر «{p.name}» من {p.house}.</p>
-          <div className="mt-8 border border-ink/15 bg-ivory p-6"><ProductBuy slug={p.slug} name={p.name}/></div>
+          <div className="mt-8 border border-ink/15 bg-ivory p-6"><ProductBuy slug={p.slug} name={p.name} prices={p.prices}/></div>
           <p className="mt-4 text-sm text-ink/70">الشحن داخل مصر من {egp(minFee)} إلى {egp(maxFee)} حسب المحافظة{site.demo&&' (أسعار تجريبية)'}. يُحسب بدقة عند إتمام الطلب.</p>
           <div className="mt-10"><NotesPyramid notes={p.notes}/></div>
         </div>
